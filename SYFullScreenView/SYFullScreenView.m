@@ -3,7 +3,7 @@
 //  SYFullScreenViewExample
 //
 //  Created by shenyuanluo on 2017/8/22.
-//  Copyright © 2017年 shenyuanluo. All rights reserved.
+//  Copyright © 2017年 http://blog.shenyuanluo.com/ All rights reserved.
 //
 
 #import "SYFullScreenView.h"
@@ -30,7 +30,7 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
 /** 保存屏幕高度 */
 @property (nonatomic, assign) CGFloat screenHeight;
 
-/** 是否以获取 superview */
+/** 是否已获取 superview */
 @property (nonatomic, assign) BOOL isGetSuperview;
 
 /** 上一次屏幕方向 */
@@ -60,7 +60,6 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
     return self;
 }
 
-
 - (instancetype)initWithCoder:(NSCoder *)aDecoder
 {
     if (self = [super initWithCoder:aDecoder])
@@ -71,18 +70,17 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
     return self;
 }
 
-
-
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self
                                                     name:UIDeviceOrientationDidChangeNotification
                                                   object:nil];
+    NSLog(@"-------- SYFullScreenView dealloc --------");
 }
-
 
 - (void)layoutSubviews
 {
+    [super layoutSubviews];
     if (NO == self.isGetSuperview)
     {
         self.lastOrientation = [[UIDevice currentDevice] orientation];
@@ -91,7 +89,6 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
         self.isGetSuperview  = YES;
     }
 }
-
 
 #pragma mark -- 初始化参数
 - (void)initParam
@@ -106,7 +103,6 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
         self.screenHeight = SY_SCREEN_WIDTH;
     }
 }
-
 
 #pragma mark 获取 view 所在的 ViewController
 - (UIViewController *)getControllerOfView:(UIView *) subView
@@ -124,7 +120,6 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
     return nil;
 }
 
-
 #pragma mark -- 添加屏幕旋转通知
 - (void)addDevOrientationNotify
 {
@@ -134,10 +129,11 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
                                                object:nil];
 }
 
-
 #pragma mark -- 屏幕方向监控
 - (void)devOrientDidChange
 {
+    [self setNeedsLayout];
+    
     UIDeviceOrientation currentOrientation = [[UIDevice currentDevice] orientation];
     
     switch (currentOrientation)
@@ -165,8 +161,8 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
             {
                 CGRect bounds = CGRectMake(0,
                                            0,
-                                           _screenHeight,
-                                           _screenWidth);
+                                           self.screenHeight,
+                                           self.screenWidth);
                 CGPoint center = CGPointMake(CGRectGetMidX([self getControllerOfView:self].view.bounds),
                                              CGRectGetMidY([self getControllerOfView:self].view.bounds));
                 
@@ -189,8 +185,8 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
             {
                 CGRect bounds = CGRectMake(0,
                                            0,
-                                           _screenHeight,
-                                           _screenWidth);
+                                           self.screenHeight,
+                                           self.screenWidth);
                 CGPoint center = CGPointMake(CGRectGetMidX([self getControllerOfView:self].view.bounds),
                                              CGRectGetMidY([self getControllerOfView:self].view.bounds));
                 
@@ -229,7 +225,6 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
     }
 }
 
-
 #pragma mark -- 全屏旋转
 - (void)rotateSemicircleToOrientation:(UIDeviceOrientation)devOrientation
                         transforAngle:(CGFloat)angle
@@ -264,10 +259,9 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
                      completion:^(BOOL finished) {
                          
                          self.transformState = SYTransformFullscreen;
-                         _lastOrientation = devOrientation;
+                         self->_lastOrientation = devOrientation;
                      }];
 }
-
 
 #pragma mark -- 进入全屏(由竖屏——>横屏时调用)
 - (void)enterFullscreenOnOrientation:(UIDeviceOrientation)devOrientation
@@ -304,14 +298,15 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
                      animations:^{
                          
                          self.transform = CGAffineTransformMakeRotation(angle);
-                         self.bounds = bounds;
-                         self.center = center;
+                         self.bounds    = bounds;
+                         self.center    = center;
                          [self refreshStatusBarToOrientation:(UIInterfaceOrientation)devOrientation];
                      }
                      completion:^(BOOL finished) {
                          
-                         self.transformState = SYTransformFullscreen;
+                         self.transformState  = SYTransformFullscreen;
                          self.lastOrientation = devOrientation;
+                         [self hiddenStatusBar];
                      }];
 }
 
@@ -323,6 +318,8 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
     {
         return;
     }
+    [self showStatusBar];
+    
     self.transformState = SYTransformAnimating;
     
     CGRect viewFrame = [self.parentView convertRect:self.portraitFrame
@@ -342,17 +339,57 @@ typedef NS_ENUM(NSUInteger, SYTransformState) {
                      }
                      completion:^(BOOL finished) {
                          
-                         self.transformState = SYTransformSmall;
+                         self.transformState  = SYTransformSmall;
                          self.lastOrientation = UIDeviceOrientationPortrait;
                      }];
 }
 
 
-#pragma mark -- 设置状态栏 位置
+#pragma mark -- 态栏位置
 - (void)refreshStatusBarToOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     [[UIApplication sharedApplication] setStatusBarOrientation:interfaceOrientation
                                                       animated:YES];
+}
+
+/*
+ 在Info.plist中，添加属性 View controller-based status bar appearance，设置为 NO
+ 下面的方法才有效果
+ */
+- (void)hiddenStatusBar
+{
+    [[UIApplication sharedApplication] setStatusBarHidden:YES
+                                            withAnimation:UIStatusBarAnimationFade];
+}
+
+- (void)showStatusBar
+{
+    [[UIApplication sharedApplication] setStatusBarHidden:NO
+                                            withAnimation:UIStatusBarAnimationNone];
+}
+
+@end
+
+
+#pragma mark - UINavigationController 分类
+/*
+ 因为放在 UINavigationController 中的 UIViewController 的 ‘- (BOOL)shouldAutorotate’ 方法
+ 并不会直接表现在 navigation 中；也就是说 navigation 的 ‘- (BOOL)shouldAutorotate’ 并不会根据
+ 当前显示的 ViewController 的 ‘- (BOOL)shouldAutorotate’ 设置的值来改变的。
+ 所以需要通过 ‘UINavigationController’ 分类来实现：
+ 【根据当前显示的 ViewController 的 ‘- (BOOL)shouldAutorotate’ 设置的值来改变的】
+ */
+@implementation UINavigationController (SYRotation)
+
+- (BOOL)shouldAutorotate
+{
+    // 注意：在子页面中，此方法返回 YES 时，状态栏方向设置会无效
+    return [[self.viewControllers lastObject] shouldAutorotate];
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return [[self.viewControllers lastObject] supportedInterfaceOrientations];
 }
 
 @end

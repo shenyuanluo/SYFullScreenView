@@ -3,7 +3,7 @@
 //  SYFullScreenViewExample
 //
 //  Created by shenyuanluo on 2017/8/22.
-//  Copyright © 2017年 shenyuanluo. All rights reserved.
+//  Copyright © 2017年 http://blog.shenyuanluo.com/ All rights reserved.
 //
 
 #import "ViewController.h"
@@ -21,7 +21,13 @@
 {
     [super viewDidLoad];
     
-    self.playView = [[SYFullScreenView alloc] initWithFrame:CGRectMake(0, 64, 320, 240)];
+    CGFloat scrHeight   = [[UIScreen mainScreen] bounds].size.height;
+    CGFloat playViewW   = [[UIScreen mainScreen] bounds].size.width;
+    CGFloat radio       = (CGFloat)(4.0f / 3.0f);
+    CGFloat playViewH   = playViewW / radio;
+    CGFloat orignY      = 812 == scrHeight ? 84 : 64;
+    CGRect playViewRect = CGRectMake(0, orignY, playViewW, playViewH);
+    self.playView = [[SYFullScreenView alloc] initWithFrame:playViewRect];
     self.playView.backgroundColor = [UIColor lightGrayColor];
     [self.view addSubview:self.playView];
 }
